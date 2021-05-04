@@ -1,0 +1,91 @@
+#!/bin/bash
+set -o errexit -o pipefail
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+LEXER="${DIR}/lexer"
+PARSER="${DIR}/parser"
+SEMANT="${DIR}/semant"
+CGEN="${DIR}/cgen"
+COOLSTDLIB="${DIR}/trap.handler"
+
+phase() {
+    set +o errexit
+    $*
+    RESULT="$?"
+    set -o errexit
+    if [ "$RESULT" -ne 0 ] ; then
+        echo "Aborted with exit code $RESULT from $1" >&2
+        exit "${RESULT}"
+    fi
+}
+
+check() {
+    F="$1"
+    while [ ! -z "$F" ]; do
+        if [ ! -x "$F" ]; then
+            echo "Can't find compiler phase $F"
+            echo "Make sure it's been compiled, placed in the current directory, and marked executable."
+            exit 2
+        fi
+        shift
+        F="$1"
+    done 
+}
+
+FILES=""
+FIRSTFILENAME=""
+RUNSPIM=false
+while [ ! -z "$1" ]; do
+    case "$1" in
+        -h|--help)
+            echo "Syntax: $0 [-r] filename.cl"
+            echo "   -r   run program instead of just compiling"
+            exit 1
+            ;;
+        -r)
+            RUNSPIM=true
+            shift
+            ;;
+        *)
+            if [ ! -f "$1" ]; then
+                echo "Can't find file ${1}"
+                exit 2 
+            fi
+            if [[ "$1" != *.cl ]]; then
+                echo "Specified file ${1} doesn't have .cl suffix"
+                exit 2
+            fi
+            if [ -z "${FIRSTFILENAME}" ]; then
+                FIRSTFILENAME="${1}"
+            fi
+            FILES="${FILES} ${1}"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "${FILES}" ]; then
+    echo "No files specified; try --help"
+    exit 2
+fi
+
+check "${LEXER}" "${PARSER}" "${SEMANT}" "${CGEN}"
+OUTFILE="$(basename ${FIRSTFILENAME} .cl).s"
+
+OUTDATA="$(phase "${LEXER}" <(cat ${FILES}) | phase "${PARSER}" | phase "${SEMANT}" | phase "${CGEN}" )"
+
+if ${RUNSPIM}; then
+    if ! which spim >& /dev/null; then
+        echo >&2 "Could not find spim executable, please install it"
+        exit 1
+    fi
+    if [ ! -f "${COOLSTDLIB}" ]; then
+        echo >&2 "Could not find ${COOLSTDLIB}"
+        exit 1
+    fi
+    spim -exception_file "${COOLSTDLIB}" -file <(echo main: ; echo "${OUTDATA}")
+else
+    echo >&2 "Wrote asm code to $OUTFILE"
+    echo "${OUTDATA}" > "$OUTFILE"
+fi

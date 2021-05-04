@@ -1,0 +1,41 @@
+#!/bin/bash
+set -o errexit -o pipefail
+
+check() {
+    F="$1"
+    while [ ! -z "$F" ]; do
+        if [ ! -x "$F" ]; then
+            echo "Can't find executable file $F."
+            echo "Make sure it's been compiled, placed in the current directory, and marked executable."
+            exit 2
+        fi
+        shift
+        F="$1"
+    done 
+}
+
+CMD="$1"
+shift || true
+ARGS="$*"
+case "$CMD" in
+    lexer)
+        check lexer
+        ./lexer "$ARGS"
+        ;;
+    parser)
+        check lexer parser
+        ./lexer "$ARGS" | ./parser "$ARGS"
+        ;;
+    semant)
+        check lexer parser semant
+        ./lexer "$ARGS" | ./parser "$ARGS" | ./semant "$ARGS"
+        ;;
+    cgen)
+        check lexer parser semant cgen
+        ./lexer "$ARGS" | ./parser "$ARGS" | ./semant "$ARGS" | ./cgen "$ARGS"
+        ;;
+    *)
+        echo "Unknown command: $CMD"
+        exit 1
+        ;;
+esac

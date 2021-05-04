@@ -1,0 +1,84 @@
+README file for Programming Assignment 3 (C++ edition)
+======================================================
+
+	The Makefile contains targets for compiling and running your
+	program. DO NOT MODIFY.
+    
+	The README contains this info. Part of the assignment is to
+	fill in the README with the write-up for your project. You should
+	explain design decisions, explain why your code is correct, and why
+	your test cases are adequate. It is part of the assignment to
+	clearly and concisely explain things in text as well as to comment
+	your code. Just edit this file.
+
+	cool.y is the skeleton for the parser specification that you
+	are to write. It already contains productions for the program
+	and the classes. Use them as an example to write the remaining
+	productions.  You should also read the bison documentation.
+	This skeleton will compile and run as is, but it doesn't
+	do much.
+
+	good.cl, bad.cl test a few features of the grammar. You should
+	add tests to ensure that good.cl exercises every legal
+	construction of the grammar and that bad.cl exercises as many
+	different parsing errors as you can squeeze into one file.
+
+    Do not modify any other file.
+
+Instructions
+------------
+
+	To compile your parser program type:
+
+	% make
+
+	This produces an executable named "parser" which is standalone
+	phase of the Cool compiler. The parser executable accepts
+    as input the output of the lexer phase, so in order to test it,
+    you'll need to copy a lexer into the directory: either your
+    own lexer from the previous assignment, or the lexer from the
+    reference implementation of the compiler.
+
+	To run your parser on the files good.cl and bad.cl type:
+
+	% make dotest
+
+    If you think your parser is correct and behaves like
+    the one we wrote, you can try it out by replacing the parser
+    in the reference compiler with your own lexer. Just copy
+    your compiled parser binary from this assignment into the
+    directory where the reference compiler is.
+
+    To submit your solution, run:
+
+    % make zip
+
+    Check the resulting zip file to make sure it contains everything
+    it should. Then submit it on Gradescope.
+
+	GOOD LUCK!
+
+---8<------8<------8<------8<---cut here---8<------8<------8<------8<---
+
+Write-up for PA3
+----------------
+
+1. Explain design decisions, explain why your code is correct, and why
+    your test cases are adequate.
+
+For cool.y code:
+1) I use the BNF to decribe the syntax of cool language and use bison's annotations of precedence to decide the priority of associativity.
+2) All the possible syntax is writen in section 3.3 of cool-manual.
+3) Most of the precedences are mentioned in section 3.2.1 of cool-manual except for the "Let ... IN ..." syntax. Therefore I add 'IN' as the lowest precedence operator to solve the conflicts. 
+4) All the interface I used are in cool-tree.h. One exception is no_expr() because the default action of no_expr() sets the line_number to the current node_lineno. However, all the no_expr node's line_number set to 0. So I add a new interface real_expr() which encapsulates no_expr().
+5) The key point of recovering error is to provide an end-character when an error is fouund. After that end-charater, the scan will restart.
+    For example, to recover the errors in the blocks, I use these rules:
+        semicolon_expressions : error ';' { }
+                              | error expr ';' { }
+        expr : '{' error '}' { }
+    if there is some error in the block, the bison will find next ';' or '}' to recover the scanning.
+       
+
+For test cases:
+1) For the good cases, I just used the all the provided cool codes and codes from my programming assignment 1, such as good.cl, arith.cl, atoi.cl, stack.cl and so on.
+2) For the bad cases, I placed errors in blocks, let-in lists, features and classes. And check if the bison will report errors after that. Also I checked that the '=' '<=' '<' are non-associative operators.

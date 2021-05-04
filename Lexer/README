@@ -1,0 +1,104 @@
+README file for Programming Assignment 2 (C++ edition)
+=====================================================
+
+	The Makefile contains targets for compiling and running your
+	program. DO NOT MODIFY.
+
+	The README contains this info. Part of the assignment is to fill
+	the README with the write-up for your project. You should
+	explain design decisions, explain why your code is correct, and
+	why your test cases are adequate. It is part of the assignment
+	to clearly and concisely explain things in text as well as to
+	comment your code. Just edit this file.
+
+	cool.flex is a skeleton file for the specification of the
+	lexical analyzer. You should complete it with your regular
+	expressions, patterns and actions. Information on how to do this
+	is in the flex manual.
+
+	test.cl is a Cool program that you can test the lexical
+	analyzer on. It (intentionally!) contains some errors, so it
+	won't compile with coolc. The errors will help you test your lexer's
+	ability to detect errors. However, test.cl does not exercise
+	all lexical constructs of COOL and part of your assignment is to rewrite
+	test.cl with a complete set of tests for your lexical analyzer.
+	A correct version of this program can be found in the example suite.
+
+	Do not modify any other file.
+
+Instructions
+------------
+
+	To compile your lextest program type:
+
+	% make
+
+	Run your lexer by putting your test input in a file 'foo.cl' and
+	run the lextest program:
+
+	% ./lexer foo.cl
+
+	To run your lexer on the file test.cl type:
+
+	% make dotest
+
+	If you think your lexical analyzer is correct and behaves like
+	the one we wrote, you can try it out by replacing the lexer
+	in the reference compiler with your own lexer. Just copy
+	your compiled lexer binary from this assignment into the
+	directory where the reference compiler is.	
+	If your lexical analyzer behaves in an
+	unexpected manner, you may get errors anywhere, i.e. during
+	parsing, during semantic analysis, during code generation or
+	only when you run the produced code. So beware.
+
+	To submit your solution, run:
+
+	% make zip
+
+	Check the resulting zip file to make sure it contains everything
+	it should. Then submit it on Gradescope.
+
+	GOOD LUCK!
+
+---8<------8<------8<------8<---cut here---8<------8<------8<------8<---
+
+Write-up for PA2
+----------------
+
+1. Explain design decisions, explain why your code is correct, and
+   why your test cases are adequate.
+
+Basically, I used states to isolate different situation. For example:
+
+In the initial state:
+|        What I encountered       |                    Action                     |  
+|                (*               |  if(state = 1)Enter Comment state & state ++  | 
+|                "                |              Enter string state               | 
+|                --               |       Enter Double dash comment state         |
+
+In the comment state:
+|        What I encountered       |                    Action                     | 
+|                *)               |   state-- & if(state = 0)Enter initial state  | 
+|               EOF               |                Error Message                  | 
+|               .                 |                Error Message                  |
+
+In the string state:
+|        What I encountered       |                    Action                     | 
+|                "                |           Enter initial state                 | 
+|               EOF               |      Error Message & set error flag           | 
+|            too  long            |      Error Message & set error flag           | 
+|               \0                |      Error Message & set error flag           | 
+|               \n                |    line_number++ & Enter initial state &      | 
+|                                 | if (error flag is not set) { Error Message }  | 
+| \\\n,\\n,\\t,\\b,\\\",\\f       |      save \n,\n,\t,\b,\",\f respectively      |
+|             \\.                 |             save . into the string            |
+|               .                 |      save the character into the string       |
+
+In the double dash state:
+|        What I encountered       |                    Action                     | 
+|               \n                |     line_number++ & Enter initial state       | 
+|               EOF               |     Error Message & begin initial state       | 
+
+
+
